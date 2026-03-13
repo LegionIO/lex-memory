@@ -37,15 +37,15 @@ RSpec.describe Legion::Extensions::Memory::Helpers::Trace do
     end
 
     it 'rejects invalid trace types' do
-      expect {
+      expect do
         described_class.new_trace(type: :bogus, content_payload: {})
-      }.to raise_error(ArgumentError, /invalid trace type/)
+      end.to raise_error(ArgumentError, /invalid trace type/)
     end
 
     it 'rejects invalid origins' do
-      expect {
+      expect do
         described_class.new_trace(type: :semantic, content_payload: {}, origin: :unknown)
-      }.to raise_error(ArgumentError, /invalid origin/)
+      end.to raise_error(ArgumentError, /invalid origin/)
     end
 
     it 'sets domain tags as array' do

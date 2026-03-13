@@ -14,7 +14,7 @@ module Legion
             return 0.0 if peak_strength.zero?
 
             e_weight = Helpers::Trace::E_WEIGHT
-            effective_rate = base_decay_rate / (1.0 + emotional_intensity * e_weight)
+            effective_rate = base_decay_rate / (1.0 + (emotional_intensity * e_weight))
             new_strength = peak_strength * ((ticks_since_access + 1).to_f**(-effective_rate))
             new_strength.clamp(0.0, 1.0)
           end

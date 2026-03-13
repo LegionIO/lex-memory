@@ -21,9 +21,7 @@ module Legion
 
         private
 
-        def default_store
-          @default_store
-        end
+        attr_reader :default_store
       end
     end
   end

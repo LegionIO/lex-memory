@@ -35,9 +35,9 @@ module Legion
               next if trace[:base_decay_rate].zero?
 
               new_strength = Helpers::Decay.compute_decay(
-                peak_strength:      trace[:peak_strength],
-                base_decay_rate:    trace[:base_decay_rate],
-                ticks_since_access: tick_count,
+                peak_strength:       trace[:peak_strength],
+                base_decay_rate:     trace[:base_decay_rate],
+                ticks_since_access:  tick_count,
                 emotional_intensity: trace[:emotional_intensity]
               )
 

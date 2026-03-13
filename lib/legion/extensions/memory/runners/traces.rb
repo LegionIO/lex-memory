@@ -5,9 +5,9 @@ module Legion
     module Memory
       module Runners
         module Traces
-          def store_trace(type:, content_payload:, store: nil, **opts)
+          def store_trace(type:, content_payload:, store: nil, **)
             store ||= default_store
-            trace = Helpers::Trace.new_trace(type: type.to_sym, content_payload: content_payload, **opts)
+            trace = Helpers::Trace.new_trace(type: type.to_sym, content_payload: content_payload, **)
             store.store(trace)
             { trace_id: trace[:trace_id], trace_type: trace[:trace_type], strength: trace[:strength] }
           end
