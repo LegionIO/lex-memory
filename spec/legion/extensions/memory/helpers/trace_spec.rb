@@ -67,6 +67,32 @@ RSpec.describe Legion::Extensions::Memory::Helpers::Trace do
         expect(trace[:strength]).to be_between(0.0, 1.0)
       end
     end
+
+    it 'includes unresolved defaulting to false' do
+      trace = described_class.new_trace(type: :episodic, content_payload: { text: 'hello' })
+
+      expect(trace).to have_key(:unresolved)
+      expect(trace[:unresolved]).to be false
+    end
+
+    it 'includes consolidation_candidate defaulting to false' do
+      trace = described_class.new_trace(type: :episodic, content_payload: { text: 'hello' })
+
+      expect(trace).to have_key(:consolidation_candidate)
+      expect(trace[:consolidation_candidate]).to be false
+    end
+
+    it 'allows unresolved to be set to true at creation' do
+      trace = described_class.new_trace(type: :episodic, content_payload: { text: 'hello' }, unresolved: true)
+
+      expect(trace[:unresolved]).to be true
+    end
+
+    it 'allows consolidation_candidate to be set to true at creation' do
+      trace = described_class.new_trace(type: :semantic, content_payload: { fact: 'test' }, consolidation_candidate: true)
+
+      expect(trace[:consolidation_candidate]).to be true
+    end
   end
 
   describe '.valid_trace?' do
