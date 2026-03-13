@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'set'
+
 module Legion
   module Extensions
     module Memory
@@ -77,6 +79,34 @@ module Legion
 
           def firmware_traces
             retrieve_by_type(:firmware)
+          end
+
+          def walk_associations(start_id:, max_hops: 12, min_strength: 0.1)
+            return [] unless @traces.key?(start_id)
+
+            results  = []
+            visited  = Set.new([start_id])
+            queue    = [[start_id, 0, [start_id]]]
+
+            until queue.empty?
+              current_id, depth, path = queue.shift
+              next unless (current = @traces[current_id])
+
+              current[:associated_traces].each do |neighbor_id|
+                next if visited.include?(neighbor_id)
+
+                neighbor = @traces[neighbor_id]
+                next unless neighbor
+                next unless neighbor[:strength] >= min_strength
+
+                visited << neighbor_id
+                neighbor_path = path + [neighbor_id]
+                results << { trace_id: neighbor_id, depth: depth + 1, path: neighbor_path }
+                queue << [neighbor_id, depth + 1, neighbor_path] if depth + 1 < max_hops
+              end
+            end
+
+            results
           end
 
           private

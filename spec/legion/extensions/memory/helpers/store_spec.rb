@@ -124,4 +124,94 @@ RSpec.describe Legion::Extensions::Memory::Helpers::Store do
       expect(results.first[:trace_type]).to eq(:firmware)
     end
   end
+
+  describe '#walk_associations' do
+    let(:trace_a) { trace_helper.new_trace(type: :semantic, content_payload: { label: 'a' }) }
+    let(:trace_b) { trace_helper.new_trace(type: :semantic, content_payload: { label: 'b' }) }
+    let(:trace_c) { trace_helper.new_trace(type: :semantic, content_payload: { label: 'c' }) }
+    let(:trace_d) { trace_helper.new_trace(type: :semantic, content_payload: { label: 'd' }) }
+
+    before do
+      store.store(trace_a)
+      store.store(trace_b)
+      store.store(trace_c)
+      store.store(trace_d)
+      # Chain: a -> b -> c -> d
+      trace_a[:associated_traces] << trace_b[:trace_id]
+      trace_b[:associated_traces] << trace_a[:trace_id]
+      trace_b[:associated_traces] << trace_c[:trace_id]
+      trace_c[:associated_traces] << trace_b[:trace_id]
+      trace_c[:associated_traces] << trace_d[:trace_id]
+      trace_d[:associated_traces] << trace_c[:trace_id]
+    end
+
+    it 'walks multiple hops from start trace' do
+      results = store.walk_associations(start_id: trace_a[:trace_id])
+      found_ids = results.map { |r| r[:trace_id] }
+      expect(found_ids).to include(trace_b[:trace_id], trace_c[:trace_id], trace_d[:trace_id])
+    end
+
+    it 'respects max_hops limit' do
+      results = store.walk_associations(start_id: trace_a[:trace_id], max_hops: 1)
+      found_ids = results.map { |r| r[:trace_id] }
+      expect(found_ids).to include(trace_b[:trace_id])
+      expect(found_ids).not_to include(trace_c[:trace_id])
+      expect(found_ids).not_to include(trace_d[:trace_id])
+    end
+
+    it 'does not include start trace in results' do
+      results = store.walk_associations(start_id: trace_a[:trace_id])
+      found_ids = results.map { |r| r[:trace_id] }
+      expect(found_ids).not_to include(trace_a[:trace_id])
+    end
+
+    it 'handles cycles without infinite loop' do
+      # Add a back-edge from d to a to create a cycle
+      trace_d[:associated_traces] << trace_a[:trace_id]
+      trace_a[:associated_traces] << trace_d[:trace_id]
+      expect { store.walk_associations(start_id: trace_a[:trace_id]) }.not_to raise_error
+      results = store.walk_associations(start_id: trace_a[:trace_id])
+      found_ids = results.map { |r| r[:trace_id] }
+      expect(found_ids.uniq.size).to eq(found_ids.size)
+    end
+
+    it 'records depth for each discovered trace' do
+      results = store.walk_associations(start_id: trace_a[:trace_id])
+      b_result = results.find { |r| r[:trace_id] == trace_b[:trace_id] }
+      c_result = results.find { |r| r[:trace_id] == trace_c[:trace_id] }
+      d_result = results.find { |r| r[:trace_id] == trace_d[:trace_id] }
+      expect(b_result[:depth]).to eq(1)
+      expect(c_result[:depth]).to eq(2)
+      expect(d_result[:depth]).to eq(3)
+    end
+
+    it 'records the full path to each discovered trace' do
+      results = store.walk_associations(start_id: trace_a[:trace_id])
+      d_result = results.find { |r| r[:trace_id] == trace_d[:trace_id] }
+      expect(d_result[:path].first).to eq(trace_a[:trace_id])
+      expect(d_result[:path].last).to eq(trace_d[:trace_id])
+      expect(d_result[:path].size).to eq(4)
+    end
+
+    it 'filters by min_strength and does not traverse beyond filtered nodes' do
+      trace_b[:strength] = 0.05
+      results = store.walk_associations(start_id: trace_a[:trace_id], min_strength: 0.1)
+      found_ids = results.map { |r| r[:trace_id] }
+      expect(found_ids).not_to include(trace_b[:trace_id])
+      expect(found_ids).not_to include(trace_c[:trace_id])
+      expect(found_ids).not_to include(trace_d[:trace_id])
+    end
+
+    it 'returns empty array for trace with no associations' do
+      lone = trace_helper.new_trace(type: :semantic, content_payload: { label: 'lone' })
+      store.store(lone)
+      results = store.walk_associations(start_id: lone[:trace_id])
+      expect(results).to eq([])
+    end
+
+    it 'returns empty array for unknown start_id' do
+      results = store.walk_associations(start_id: 'nonexistent-id')
+      expect(results).to eq([])
+    end
+  end
 end
