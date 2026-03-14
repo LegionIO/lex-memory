@@ -18,7 +18,7 @@ module Legion
           def initialize
             Legion::Logging.info '[memory] CacheStore initialized (memcached-backed)'
             @traces       = Legion::Cache.get(TRACES_KEY) || {}
-            @associations = Legion::Cache.get(ASSOC_KEY) || Hash.new { |h, k| h[k] = Hash.new(0) }
+            @associations = Legion::Cache.get(ASSOC_KEY) || {}
             @dirty        = false
             Legion::Logging.info "[memory] CacheStore loaded #{@traces.size} traces from cache"
           end
@@ -68,8 +68,10 @@ module Legion
           def record_coactivation(trace_id_a, trace_id_b)
             return if trace_id_a == trace_id_b
 
-            @associations[trace_id_a][trace_id_b] += 1
-            @associations[trace_id_b][trace_id_a] += 1
+            @associations[trace_id_a] ||= {}
+            @associations[trace_id_b] ||= {}
+            @associations[trace_id_a][trace_id_b] = (@associations[trace_id_a][trace_id_b] || 0) + 1
+            @associations[trace_id_b][trace_id_a] = (@associations[trace_id_b][trace_id_a] || 0) + 1
 
             threshold = Helpers::Trace::COACTIVATION_THRESHOLD
             link_traces(trace_id_a, trace_id_b) if @associations[trace_id_a][trace_id_b] >= threshold
@@ -130,7 +132,7 @@ module Legion
           # Pull latest state from cache (after another process wrote)
           def reload
             @traces       = Legion::Cache.get(TRACES_KEY) || {}
-            @associations = Legion::Cache.get(ASSOC_KEY) || Hash.new { |h, k| h[k] = Hash.new(0) }
+            @associations = Legion::Cache.get(ASSOC_KEY) || {}
             @dirty        = false
             Legion::Logging.debug "[memory] CacheStore reloaded #{@traces.size} traces from cache"
           end
