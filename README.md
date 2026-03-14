@@ -68,6 +68,14 @@ Legion::Extensions::Memory::Runners::Traces.retrieve_associated(trace_id: "uuid"
 Legion::Extensions::Memory::Runners::Traces.retrieve_ranked(trace_ids: ["uuid1", "uuid2"])
 ```
 
+### Active Retrieval (used by lex-cortex)
+
+```ruby
+# Retrieve top N traces by strength and mark them as reinforced
+Legion::Extensions::Memory::Runners::Traces.retrieve_and_reinforce(limit: 10)
+# => { count: 10, traces: [...] }
+```
+
 ### Memory Consolidation
 
 ```ruby

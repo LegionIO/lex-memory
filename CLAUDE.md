@@ -25,9 +25,15 @@ lib/legion/extensions/memory/
     trace.rb          # Trace structure, TRACE_TYPES, decay constants, new_trace factory
     decay.rb          # compute_decay, compute_reinforcement, compute_retrieval_score, compute_storage_tier
     store.rb          # In-memory Store class (hash-backed, not DB-persisted)
+    cache_store.rb    # Cache-backed Store using Legion::Cache (Memcached/Redis) — flush/reload API
+    error_tracer.rb   # Error tracing helpers
   runners/
-    traces.rb         # store_trace, get_trace, retrieve_by_type/domain/associated/ranked, delete_trace
+    traces.rb         # store_trace, get_trace, retrieve_by_type/domain/associated/ranked,
+                      # delete_trace, retrieve_and_reinforce
     consolidation.rb  # reinforce, decay_cycle, migrate_tier, hebbian_link, erase_by_type/agent
+  actors/
+    decay.rb          # Every 60s - calls decay_cycle
+    tier_migration.rb # Every 300s - calls migrate_tier
 spec/
   legion/extensions/memory/
     helpers/
@@ -59,18 +65,31 @@ COACTIVATION_THRESHOLD = 3      # co-activations before link forms
 
 ## Store (Development vs Production)
 
-`Helpers::Store` is an in-memory hash-backed store. The comment in `store.rb` explicitly states: "Production deployments should use a PostgreSQL + Redis backed store." The Store API:
+`Helpers::Store` is an in-memory hash-backed store for development/testing. `Helpers::CacheStore` is a cache-backed store backed by `Legion::Cache` (Memcached/Redis) for shared cross-process access.
+
+The runner's `default_store` auto-selects: uses `CacheStore` when `Legion::Cache.connected?` returns true, falls back to `Store` otherwise.
+
+Both stores implement the same API:
 - `store(trace)` / `get(trace_id)` / `delete(trace_id)`
 - `retrieve_by_type(type, min_strength:, limit:)`
 - `retrieve_by_domain(domain_tag, min_strength:, limit:)`
 - `retrieve_associated(trace_id, min_strength:, limit:)`
 - `record_coactivation(id_a, id_b)` - increments counter, links when >= COACTIVATION_THRESHOLD
 - `all_traces(min_strength:)` / `count` / `firmware_traces`
+- `walk_associations(start_id:, max_hops:, min_strength:)` - BFS traversal with cycle detection
+
+`CacheStore` additionally provides:
+- `flush` - writes local state to cache (only when dirty)
+- `reload` - pulls latest state from cache (after another process wrote)
+- TTL: 24 hours (`TRACES_KEY = 'legion:memory:traces'`, `ASSOC_KEY = 'legion:memory:associations'`)
 
 ## Runners
 
 ### Traces
-CRUD operations. All runners accept `store:` keyword to inject a custom store instance (used in specs). Default store is `@default_store ||= Helpers::Store.new`.
+CRUD operations. All runners accept `store:` keyword to inject a custom store instance (used in specs). Default store is auto-selected via `CacheStore` (when cache connected) or `Store`.
+
+Additional method:
+- `retrieve_and_reinforce(limit: 10)` — retrieves top N traces by strength, increments `reinforcement_count` and `last_reinforced` on each (skips firmware traces); used by lex-cortex's `memory_retrieval` phase
 
 ### Consolidation
 Lifecycle operations:
@@ -94,3 +113,6 @@ Lifecycle operations:
 - Retrieval score formula: `strength * recency_factor * emotional_weight * association_bonus`
 - `retrieve_ranked` re-scores by retrieval score, not stored strength
 - The gemspec uses `git ls-files` (differs from other LEX gems using `Dir.glob`) — both approaches are fine
+- `CacheStore` stores all traces in a single Memcached key (`legion:memory:traces`) — large trace sets require sufficient Memcached item size limits
+- `CacheStore#flush` only writes when `@dirty` is true; safe to call frequently
+- `retrieve_and_reinforce` increments `reinforcement_count` in-place on the trace hash and re-stores it — this makes retrieval itself a reinforcing action
