@@ -1,7 +1,7 @@
 # lex-memory
 
 **Level 3 Documentation**
-- **Parent**: `extensions-agentic/CLAUDE.md`
+- **Parent**: `/Users/miverso2/rubymine/legion/extensions-agentic/CLAUDE.md`
 - **Grandparent**: `/Users/miverso2/rubymine/legion/CLAUDE.md`
 
 ## Purpose
