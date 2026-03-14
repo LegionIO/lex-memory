@@ -70,10 +70,35 @@ module Legion
             { deleted: true, trace_id: trace_id }
           end
 
+          def retrieve_and_reinforce(limit: 10, store: nil, **)
+            store ||= default_store
+            all = store.all_traces(min_strength: 0.1)
+            top = all.sort_by { |t| -t[:strength] }.first(limit)
+
+            top.each do |trace|
+              next if trace[:base_decay_rate].zero? # skip firmware
+
+              trace[:reinforcement_count] += 1
+              trace[:last_reinforced] = Time.now.utc
+              store.store(trace)
+            end
+
+            Legion::Logging.debug "[memory] retrieve_and_reinforce: retrieved=#{top.size} from=#{all.size} total"
+            { count: top.size, traces: top }
+          end
+
           private
 
           def default_store
-            @default_store ||= Helpers::Store.new
+            @default_store ||= begin
+              if defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?
+                Legion::Logging.debug '[memory] Traces using CacheStore (shared memcached)'
+                Helpers::CacheStore.new
+              else
+                Legion::Logging.debug "[memory] Traces using in-memory Store (cache defined=#{defined?(Legion::Cache)} connected=#{defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?})"
+                Helpers::Store.new
+              end
+            end
           end
 
           include Legion::Extensions::Helpers::Lex if defined?(Legion::Extensions::Helpers::Lex)

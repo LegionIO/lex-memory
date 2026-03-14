@@ -52,7 +52,7 @@ module Legion
           def new_trace(type:, content_payload:, content_embedding: nil, emotional_valence: 0.0, # rubocop:disable Metrics/ParameterLists
                         emotional_intensity: 0.0, domain_tags: [], origin: :direct_experience,
                         source_agent_id: nil, partition_id: nil, imprint_active: false,
-                        unresolved: false, consolidation_candidate: false, **)
+                        unresolved: false, consolidation_candidate: false, confidence: nil, **)
             raise ArgumentError, "invalid trace type: #{type}" unless TRACE_TYPES.include?(type)
             raise ArgumentError, "invalid origin: #{origin}" unless ORIGINS.include?(origin)
 
@@ -75,7 +75,7 @@ module Legion
               last_reinforced:         now,
               last_decayed:            now,
               reinforcement_count:     imprint_active ? 1 : 0,
-              confidence:              type == :firmware ? 1.0 : 0.5,
+              confidence:              confidence || (type == :firmware ? 1.0 : 0.5),
               storage_tier:            :hot,
               partition_id:            partition_id,
               encryption_key_id:       nil,
