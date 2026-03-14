@@ -106,15 +106,15 @@ module Legion
           private
 
           def default_store
-            @default_store ||= begin
-              if defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?
-                Legion::Logging.debug '[memory] Consolidation using CacheStore (shared memcached)'
-                Helpers::CacheStore.new
-              else
-                Legion::Logging.debug "[memory] Consolidation using in-memory Store (cache defined=#{defined?(Legion::Cache)} connected=#{defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?})"
-                Helpers::Store.new
-              end
-            end
+            @default_store ||= if defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?
+                                 Legion::Logging.debug '[memory] Consolidation using CacheStore (shared memcached)'
+                                 Helpers::CacheStore.new
+                               else
+                                 cache_status = "defined=#{defined?(Legion::Cache)} " \
+                                                "connected=#{defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?}"
+                                 Legion::Logging.debug "[memory] Consolidation using in-memory Store (cache #{cache_status})"
+                                 Helpers::Store.new
+                               end
           end
 
           include Legion::Extensions::Helpers::Lex if defined?(Legion::Extensions::Helpers::Lex)

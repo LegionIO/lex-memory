@@ -51,9 +51,8 @@ module Legion
               # Debounce: skip if same message within window
               now = Time.now.utc
               key = "#{level}:#{message[0..100]}"
-              if @recent[key] && (now - @recent[key]) < DEBOUNCE_WINDOW
-                return
-              end
+              return if @recent[key] && (now - @recent[key]) < DEBOUNCE_WINDOW
+
               @recent[key] = now
 
               # Clean old entries periodically

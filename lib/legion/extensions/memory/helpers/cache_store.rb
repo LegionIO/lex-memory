@@ -72,9 +72,7 @@ module Legion
             @associations[trace_id_b][trace_id_a] += 1
 
             threshold = Helpers::Trace::COACTIVATION_THRESHOLD
-            if @associations[trace_id_a][trace_id_b] >= threshold
-              link_traces(trace_id_a, trace_id_b)
-            end
+            link_traces(trace_id_a, trace_id_b) if @associations[trace_id_a][trace_id_b] >= threshold
             @dirty = true
           end
 
@@ -145,12 +143,10 @@ module Legion
             return unless trace_a && trace_b
 
             max = Helpers::Trace::MAX_ASSOCIATIONS
-            unless trace_a[:associated_traces].include?(id_b) || trace_a[:associated_traces].size >= max
-              trace_a[:associated_traces] << id_b
-            end
-            unless trace_b[:associated_traces].include?(id_a) || trace_b[:associated_traces].size >= max
-              trace_b[:associated_traces] << id_a
-            end
+            trace_a[:associated_traces] << id_b unless trace_a[:associated_traces].include?(id_b) || trace_a[:associated_traces].size >= max
+            return if trace_b[:associated_traces].include?(id_a) || trace_b[:associated_traces].size >= max
+
+            trace_b[:associated_traces] << id_a
           end
         end
       end
