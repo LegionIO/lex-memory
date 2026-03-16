@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-03-16
+
+### Fixed
+- Add missing `require 'client'` to entry point — `Memory::Client` was never auto-loaded at runtime, causing dream cycle and other consumers to skip memory integration
+
 ## [0.1.1] - 2026-03-16
 
 ### Fixed

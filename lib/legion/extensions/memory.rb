@@ -8,6 +8,7 @@ require 'legion/extensions/memory/helpers/cache_store'
 require 'legion/extensions/memory/helpers/error_tracer'
 require 'legion/extensions/memory/runners/traces'
 require 'legion/extensions/memory/runners/consolidation'
+require 'legion/extensions/memory/client'
 
 module Legion
   module Extensions

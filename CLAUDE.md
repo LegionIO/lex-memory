@@ -11,7 +11,7 @@ Memory trace system for the LegionIO cognitive architecture. Implements typed tr
 ## Gem Info
 
 - **Gem name**: `lex-memory`
-- **Version**: `0.1.0`
+- **Version**: `0.1.2`
 - **Module**: `Legion::Extensions::Memory`
 - **Ruby**: `>= 3.4`
 - **License**: MIT
@@ -67,7 +67,7 @@ COACTIVATION_THRESHOLD = 3      # co-activations before link forms
 
 `Helpers::Store` is an in-memory hash-backed store for development/testing. `Helpers::CacheStore` is a cache-backed store backed by `Legion::Cache` (Memcached/Redis) for shared cross-process access.
 
-The runner's `default_store` auto-selects: uses `CacheStore` when `Legion::Cache.connected?` returns true, falls back to `Store` otherwise.
+**Shared store singleton**: `Legion::Extensions::Memory.shared_store` returns a process-wide store instance. All runner modules (`Traces`, `Consolidation`), the `Client` class, and ad-hoc runners created via `Object.new.extend(Runners::Traces)` all delegate to this singleton. This ensures traces written by one component (ErrorTracer, coldstart, tick retrieval) are visible to all others (dream cycle, predictions, cortex). Auto-selects `CacheStore` when `Legion::Cache.connected?` returns true, falls back to `Store` otherwise. `Memory.reset_store!` clears the singleton (used in test setup).
 
 Both stores implement the same API:
 - `store(trace)` / `get(trace_id)` / `delete(trace_id)`
@@ -86,7 +86,7 @@ Both stores implement the same API:
 ## Runners
 
 ### Traces
-CRUD operations. All runners accept `store:` keyword to inject a custom store instance (used in specs). Default store is auto-selected via `CacheStore` (when cache connected) or `Store`.
+CRUD operations. All runners accept `store:` keyword to inject a custom store instance (used in specs). Default store delegates to `Memory.shared_store`.
 
 Additional method:
 - `retrieve_and_reinforce(limit: 10)` — retrieves top N traces by strength, increments `reinforcement_count` and `last_reinforced` on each (skips firmware traces); used by lex-cortex's `memory_retrieval` phase
