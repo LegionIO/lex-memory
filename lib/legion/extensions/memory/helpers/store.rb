@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Legion
   module Extensions
     module Memory
@@ -12,6 +14,7 @@ module Legion
           def initialize
             @traces = {}
             @associations = Hash.new { |h, k| h[k] = Hash.new(0) }
+            load_from_local
           end
 
           def store(trace)
@@ -107,7 +110,117 @@ module Legion
             results
           end
 
+          def save_to_local
+            return unless defined?(Legion::Data::Local) && Legion::Data::Local.connected?
+            return unless Legion::Data::Local.connection.table_exists?(:memory_traces)
+
+            db = Legion::Data::Local.connection
+
+            @traces.each_value do |trace|
+              row = serialize_trace_for_db(trace)
+              existing = db[:memory_traces].where(trace_id: trace[:trace_id]).first
+              if existing
+                db[:memory_traces].where(trace_id: trace[:trace_id]).update(row)
+              else
+                db[:memory_traces].insert(row)
+              end
+            end
+
+            db_trace_ids = db[:memory_traces].select_map(:trace_id)
+            memory_trace_ids = @traces.keys
+            stale_ids = db_trace_ids - memory_trace_ids
+            db[:memory_traces].where(trace_id: stale_ids).delete unless stale_ids.empty?
+
+            db[:memory_associations].delete
+            @associations.each do |id_a, targets|
+              targets.each do |id_b, count|
+                db[:memory_associations].insert(trace_id_a: id_a, trace_id_b: id_b, coactivation_count: count)
+              end
+            end
+          end
+
+          def load_from_local
+            return unless defined?(Legion::Data::Local) && Legion::Data::Local.connected?
+            return unless Legion::Data::Local.connection.table_exists?(:memory_traces)
+
+            db = Legion::Data::Local.connection
+
+            db[:memory_traces].each do |row|
+              @traces[row[:trace_id]] = deserialize_trace_from_db(row)
+            end
+
+            db[:memory_associations].each do |row|
+              @associations[row[:trace_id_a]] ||= {}
+              @associations[row[:trace_id_a]][row[:trace_id_b]] = row[:coactivation_count]
+            end
+          end
+
           private
+
+          def serialize_trace_for_db(trace)
+            payload = trace[:content_payload] || trace[:content]
+            {
+              trace_id:                trace[:trace_id],
+              trace_type:              trace[:trace_type].to_s,
+              content:                 payload.is_a?(Hash) ? ::JSON.generate(payload) : payload.to_s,
+              strength:                trace[:strength],
+              peak_strength:           trace[:peak_strength],
+              base_decay_rate:         trace[:base_decay_rate],
+              emotional_valence:       trace[:emotional_valence].is_a?(Hash) ? ::JSON.generate(trace[:emotional_valence]) : nil,
+              emotional_intensity:     trace[:emotional_intensity],
+              domain_tags:             trace[:domain_tags].is_a?(Array) ? ::JSON.generate(trace[:domain_tags]) : nil,
+              origin:                  trace[:origin].to_s,
+              created_at:              trace[:created_at],
+              last_reinforced:         trace[:last_reinforced],
+              last_decayed:            trace[:last_decayed],
+              reinforcement_count:     trace[:reinforcement_count],
+              confidence:              trace[:confidence],
+              storage_tier:            trace[:storage_tier].to_s,
+              partition_id:            trace[:partition_id],
+              associated_traces:       trace[:associated_traces].is_a?(Array) ? ::JSON.generate(trace[:associated_traces]) : nil,
+              parent_id:               trace[:parent_trace_id] || trace[:parent_id],
+              child_ids:               (trace[:child_trace_ids] || trace[:child_ids]).then { |v|
+                                         v.is_a?(Array) ? ::JSON.generate(v) : nil
+                                       },
+              unresolved:              trace[:unresolved] || false,
+              consolidation_candidate: trace[:consolidation_candidate] || false
+            }
+          end
+
+          def deserialize_trace_from_db(row)
+            content_raw = row[:content]
+            content = begin
+              parsed = ::JSON.parse(content_raw, symbolize_names: true)
+              parsed.is_a?(Hash) ? parsed : content_raw
+            rescue StandardError
+              content_raw
+            end
+            {
+              trace_id:                row[:trace_id],
+              trace_type:              row[:trace_type]&.to_sym,
+              content_payload:         content,
+              content:                 content,
+              strength:                row[:strength],
+              peak_strength:           row[:peak_strength],
+              base_decay_rate:         row[:base_decay_rate],
+              emotional_valence:       (::JSON.parse(row[:emotional_valence], symbolize_names: true) rescue 0.0),
+              emotional_intensity:     row[:emotional_intensity],
+              domain_tags:             (::JSON.parse(row[:domain_tags]) rescue []),
+              origin:                  row[:origin]&.to_sym,
+              created_at:              row[:created_at],
+              last_reinforced:         row[:last_reinforced],
+              last_decayed:            row[:last_decayed],
+              reinforcement_count:     row[:reinforcement_count],
+              confidence:              row[:confidence],
+              storage_tier:            row[:storage_tier]&.to_sym,
+              partition_id:            row[:partition_id],
+              associated_traces:       (::JSON.parse(row[:associated_traces]) rescue []),
+              parent_trace_id:         row[:parent_id],
+              child_trace_ids:         (::JSON.parse(row[:child_ids]) rescue []),
+              unresolved:              row[:unresolved] || false,
+              consolidation_candidate: row[:consolidation_candidate] || false
+            }
+          end
 
           def link_traces(id_a, id_b)
             trace_a = @traces[id_a]

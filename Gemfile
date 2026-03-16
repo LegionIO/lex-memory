@@ -10,6 +10,6 @@ group :test do
   gem 'rubocop', require: false
   gem 'rubocop-rspec', require: false
   gem 'simplecov'
+  gem 'sequel'
+  gem 'sqlite3'
 end
-
-gem 'legion-gaia', path: '../../legion-gaia'
