@@ -122,6 +122,29 @@ During the imprint window (first 7 days), the multiplier is 3.0.
 
 Traces that co-activate 3 or more times form a permanent associative link. Each trace stores up to 20 links. Linked traces receive a 15% bonus in retrieval scoring.
 
+## ErrorTracer
+
+`Helpers::ErrorTracer` wraps `Legion::Logging.error` and `fatal` to auto-create episodic traces when errors occur. A 60-second debounce prevents trace flooding from repeated errors.
+
+## Standalone Client
+
+```ruby
+client = Legion::Extensions::Memory::Client.new
+client.store_trace(type: :semantic, content_payload: { fact: "..." })
+client.retrieve_by_type(type: :semantic)
+client.decay_cycle(tick_count: 1)
+```
+
+## SQLite Persistence
+
+When `legion-data` Local is available, traces can be persisted to SQLite:
+
+```ruby
+store = Legion::Extensions::Memory.shared_store
+store.save_to_local    # persist to SQLite
+store.load_from_local  # restore from SQLite
+```
+
 ## Development
 
 ```bash

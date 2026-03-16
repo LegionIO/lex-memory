@@ -26,7 +26,7 @@ lib/legion/extensions/memory/
     decay.rb          # compute_decay, compute_reinforcement, compute_retrieval_score, compute_storage_tier
     store.rb          # In-memory Store class (hash-backed, not DB-persisted)
     cache_store.rb    # Cache-backed Store using Legion::Cache (Memcached/Redis) — flush/reload API
-    error_tracer.rb   # Error tracing helpers
+    error_tracer.rb   # Wraps Legion::Logging.error/fatal to auto-create episodic traces (60s debounce)
   runners/
     traces.rb         # store_trace, get_trace, retrieve_by_type/domain/associated/ranked,
                       # delete_trace, retrieve_and_reinforce
@@ -34,6 +34,9 @@ lib/legion/extensions/memory/
   actors/
     decay.rb          # Every 60s - calls decay_cycle
     tier_migration.rb # Every 300s - calls migrate_tier
+  local_migrations/
+    20260316000001_create_memory_traces.rb      # SQLite persistence for traces
+    20260316000002_create_memory_associations.rb # SQLite persistence for associations
 spec/
   legion/extensions/memory/
     helpers/
@@ -44,6 +47,7 @@ spec/
       traces_spec.rb
       consolidation_spec.rb
     client_spec.rb
+    local_persistence_spec.rb
   legion/extensions/memory_spec.rb
 ```
 
@@ -53,6 +57,7 @@ spec/
 E_WEIGHT               = 0.3    # emotional intensity weight on decay
 R_AMOUNT               = 0.10   # base reinforcement per call
 IMPRINT_MULTIPLIER     = 3.0    # multiplier during imprint window
+ARCHIVE_THRESHOLD      = 0.05   # traces below this are archived
 AUTO_FIRE_THRESHOLD    = 0.85   # procedural auto-fire threshold
 PRUNE_THRESHOLD        = 0.01   # traces below this are deleted
 HOT_TIER_WINDOW        = 86_400     # 24h
@@ -82,6 +87,10 @@ Both stores implement the same API:
 - `flush` - writes local state to cache (only when dirty)
 - `reload` - pulls latest state from cache (after another process wrote)
 - TTL: 24 hours (`TRACES_KEY = 'legion:memory:traces'`, `ASSOC_KEY = 'legion:memory:associations'`)
+
+**SQLite persistence**: `Store#save_to_local` and `Store#load_from_local` persist traces and associations to SQLite via `Legion::Data::Local`. Two local migrations create `memory_traces` and `memory_associations` tables. This enables trace survival across process restarts without requiring Memcached.
+
+**Client class**: `Legion::Extensions::Memory::Client` holds `@default_store` injected via constructor, includes both `Runners::Traces` and `Runners::Consolidation`.
 
 ## Runners
 
@@ -113,6 +122,8 @@ Lifecycle operations:
 - Retrieval score formula: `strength * recency_factor * emotional_weight * association_bonus`
 - `retrieve_ranked` re-scores by retrieval score, not stored strength
 - The gemspec uses `git ls-files` (differs from other LEX gems using `Dir.glob`) — both approaches are fine
+- Actor namespace is `module Actor` (singular), not `Actors`
+- `content_embedding:` is a field on trace hashes (reserved for future vector search)
 - `CacheStore` stores all traces in a single Memcached key (`legion:memory:traces`) — large trace sets require sufficient Memcached item size limits
 - `CacheStore#flush` only writes when `@dirty` is true; safe to call frequently
 - `retrieve_and_reinforce` increments `reinforcement_count` in-place on the trace hash and re-stores it — this makes retrieval itself a reinforcing action
