@@ -90,15 +90,7 @@ module Legion
           private
 
           def default_store
-            @default_store ||= if defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?
-                                 Legion::Logging.debug '[memory] Traces using CacheStore (shared memcached)'
-                                 Helpers::CacheStore.new
-                               else
-                                 cache_status = "defined=#{defined?(Legion::Cache)} " \
-                                                "connected=#{defined?(Legion::Cache) && Legion::Cache.respond_to?(:connected?) && Legion::Cache.connected?}"
-                                 Legion::Logging.debug "[memory] Traces using in-memory Store (cache #{cache_status})"
-                                 Helpers::Store.new
-                               end
+            @default_store ||= Legion::Extensions::Memory.shared_store
           end
 
           include Legion::Extensions::Helpers::Lex if defined?(Legion::Extensions::Helpers::Lex)

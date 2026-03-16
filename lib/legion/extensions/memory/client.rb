@@ -16,7 +16,7 @@ module Legion
         attr_reader :store
 
         def initialize(store: nil, **)
-          @default_store = store || Helpers::Store.new
+          @default_store = store || Legion::Extensions::Memory.shared_store
         end
 
         private
