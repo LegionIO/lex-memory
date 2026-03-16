@@ -124,7 +124,7 @@ module Legion
             return unless @dirty
 
             Legion::Cache.set(TRACES_KEY, @traces, TTL)
-            Legion::Cache.set(ASSOC_KEY, @associations, TTL)
+            Legion::Cache.set(ASSOC_KEY, strip_default_procs(@associations), TTL)
             @dirty = false
             Legion::Logging.debug "[memory] CacheStore flushed #{@traces.size} traces to cache"
           end
@@ -138,6 +138,12 @@ module Legion
           end
 
           private
+
+          def strip_default_procs(hash)
+            hash.each_with_object({}) do |(k, v), plain|
+              plain[k] = v.is_a?(Hash) ? {}.merge(v) : v
+            end
+          end
 
           def link_traces(id_a, id_b)
             trace_a = @traces[id_a]

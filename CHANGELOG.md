@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-03-16
+
+### Fixed
+- Strip default procs from associations hash before Memcached serialization in `CacheStore#flush` to prevent `can't dump hash with default proc` marshalling error
+
 ### Added
 - `spec/legion/extensions/memory/actors/decay_spec.rb` (7 examples) — tests for the Decay actor (Every 60s)
 - `spec/legion/extensions/memory/actors/tier_migration_spec.rb` (7 examples) — tests for the TierMigration actor (Every 300s)
