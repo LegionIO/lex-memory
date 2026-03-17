@@ -76,6 +76,7 @@ GEM
     sqlite3 (2.9.2)
       mini_portile2 (~> 2.8.0)
     sqlite3 (2.9.2-arm64-darwin)
+    sqlite3 (2.9.2-x86_64-linux-gnu)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
@@ -83,6 +84,7 @@ GEM
 PLATFORMS
   arm64-darwin-25
   ruby
+  x86_64-linux
 
 DEPENDENCIES
   lex-memory!
