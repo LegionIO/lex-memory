@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    lex-memory (0.1.2)
+    lex-memory (0.2.0)
 
 GEM
   remote: https://rubygems.org/
