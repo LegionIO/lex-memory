@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0] - 2026-03-17
+
+### Added
+- `PersistentStore`: Sequel-backed durable memory storage per agent (write, read, touch, count, total_bytes, eviction)
+- `Quota`: per-agent trace count and byte size limits with LRU/confidence eviction strategies
+- `BatchDecay`: periodic DB-backed confidence reduction with configurable rate and min threshold
 
 ## [0.1.2] - 2026-03-16
 
