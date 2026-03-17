@@ -7,7 +7,7 @@ Sequel.migration do
       String :trace_id_a, null: false, index: true
       String :trace_id_b, null: false, index: true
       Integer :coactivation_count, null: false, default: 1
-      unique [:trace_id_a, :trace_id_b]
+      unique %i[trace_id_a trace_id_b]
     end
   end
 end

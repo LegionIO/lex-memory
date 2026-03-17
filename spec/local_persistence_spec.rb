@@ -52,17 +52,17 @@ RSpec.describe 'lex-memory local SQLite persistence' do
 
   let(:semantic_trace) do
     trace_helper.new_trace(
-      type: :semantic,
+      type:            :semantic,
       content_payload: { fact: 'SQLite is persistent' },
-      domain_tags: ['storage']
+      domain_tags:     ['storage']
     )
   end
 
   let(:episodic_trace) do
     trace_helper.new_trace(
-      type: :episodic,
+      type:            :episodic,
       content_payload: { event: 'first boot' },
-      domain_tags: ['boot']
+      domain_tags:     ['boot']
     )
   end
 

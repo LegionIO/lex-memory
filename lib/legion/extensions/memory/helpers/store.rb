@@ -179,9 +179,9 @@ module Legion
               partition_id:            trace[:partition_id],
               associated_traces:       trace[:associated_traces].is_a?(Array) ? ::JSON.generate(trace[:associated_traces]) : nil,
               parent_id:               trace[:parent_trace_id] || trace[:parent_id],
-              child_ids:               (trace[:child_trace_ids] || trace[:child_ids]).then { |v|
+              child_ids:               (trace[:child_trace_ids] || trace[:child_ids]).then do |v|
                                          v.is_a?(Array) ? ::JSON.generate(v) : nil
-                                       },
+                                       end,
               unresolved:              trace[:unresolved] || false,
               consolidation_candidate: trace[:consolidation_candidate] || false
             }
@@ -203,9 +203,17 @@ module Legion
               strength:                row[:strength],
               peak_strength:           row[:peak_strength],
               base_decay_rate:         row[:base_decay_rate],
-              emotional_valence:       (::JSON.parse(row[:emotional_valence], symbolize_names: true) rescue 0.0),
+              emotional_valence:       begin
+                ::JSON.parse(row[:emotional_valence], symbolize_names: true)
+              rescue StandardError
+                0.0
+              end,
               emotional_intensity:     row[:emotional_intensity],
-              domain_tags:             (::JSON.parse(row[:domain_tags]) rescue []),
+              domain_tags:             begin
+                ::JSON.parse(row[:domain_tags])
+              rescue StandardError
+                []
+              end,
               origin:                  row[:origin]&.to_sym,
               created_at:              row[:created_at],
               last_reinforced:         row[:last_reinforced],
@@ -214,9 +222,17 @@ module Legion
               confidence:              row[:confidence],
               storage_tier:            row[:storage_tier]&.to_sym,
               partition_id:            row[:partition_id],
-              associated_traces:       (::JSON.parse(row[:associated_traces]) rescue []),
+              associated_traces:       begin
+                ::JSON.parse(row[:associated_traces])
+              rescue StandardError
+                []
+              end,
               parent_trace_id:         row[:parent_id],
-              child_trace_ids:         (::JSON.parse(row[:child_ids]) rescue []),
+              child_trace_ids:         begin
+                ::JSON.parse(row[:child_ids])
+              rescue StandardError
+                []
+              end,
               unresolved:              row[:unresolved] || false,
               consolidation_candidate: row[:consolidation_candidate] || false
             }

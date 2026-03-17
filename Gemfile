@@ -9,7 +9,7 @@ group :test do
   gem 'rspec_junit_formatter'
   gem 'rubocop', require: false
   gem 'rubocop-rspec', require: false
-  gem 'simplecov'
   gem 'sequel'
+  gem 'simplecov'
   gem 'sqlite3'
 end
