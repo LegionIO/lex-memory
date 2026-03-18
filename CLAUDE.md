@@ -11,7 +11,7 @@ Memory trace system for the LegionIO cognitive architecture. Implements typed tr
 ## Gem Info
 
 - **Gem name**: `lex-memory`
-- **Version**: `0.1.2`
+- **Version**: `0.2.0`
 - **Module**: `Legion::Extensions::Memory`
 - **Ruby**: `>= 3.4`
 - **License**: MIT
